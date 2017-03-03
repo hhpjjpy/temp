@@ -2,7 +2,8 @@
 
 #include <malloc.h>
 #include <string.h>
-
+//bug教训，注意表达式类型的统一，特别是无符号和有符号的数，小数据往往一样，增长之后无符号到有符号溢出，
+//往往这样有可能测试不充分的时候一开始没有问题，后续发现莫名其妙！！！！注意！！！！特别是函数返回值的时候，一定要匹配。
 cc_table *create_table(table_type *type){
 	cc_table *table = (cc_table*)malloc(sizeof(cc_table));
 	table->nalloc = 16;
@@ -16,10 +17,10 @@ cc_table *create_table(table_type *type){
 
 Entry *find_entry(cc_table *ta,void *key){
 	Entry *p;
-	int index = (ta->type->hash)(key)&(ta->nalloc - 1);
+	unsigned int index = (ta->type->hash)(key)&(ta->nalloc - 1);
 	p = ta->table[index];
 	while (p){
-		if (ta->type->keycom(key, p->key) == 0)
+		if ((ta->type->keycom(key, p->key)) == 0)
 			return p;
 		p = p->next;
 	}
@@ -36,11 +37,11 @@ void *get_value(cc_table *ta,void *key){
 
 void  expand(cc_table *ta,int nalloc){
 	Entry **new_table = malloc(nalloc*sizeof(void*));
-	for (int i = 0; i < ta->nalloc;i++){
+	for (unsigned int i = 0; i < ta->nalloc;i++){
 		Entry *p = ta->table[i];
 		while (p){
 			ta->table[i] = p->next;
-			int index = (ta->type->hash(p->key))&(nalloc - 1);
+			unsigned int index = (ta->type->hash(p->key))&(nalloc - 1);
 			Entry *temp = new_table[index];
 			new_table[index] = p;
 			p->next = temp;
@@ -56,7 +57,7 @@ void  expand(cc_table *ta,int nalloc){
 }
 
 int insert_entry(cc_table *ta,void *key, void *val){
-	if (ta->nalloc * 10 < ta->nums){
+	if (ta->nalloc * 2 < ta->nums){
 		expand(ta,2*ta->nalloc);
 	}
 	Entry *p = (Entry*)malloc(sizeof(Entry));
@@ -64,7 +65,7 @@ int insert_entry(cc_table *ta,void *key, void *val){
 	p->val = val;
 	p->next = NULL;
 
-	int index = (ta->type->hash(key))%(ta->nalloc - 1);
+	unsigned int index = (ta->type->hash(key))&(ta->nalloc - 1);
 	Entry *temp = ta->table[index];
 	ta->table[index] = p;
 	p->next = temp;
@@ -84,7 +85,7 @@ int update_entry(cc_table *ta,void *key, void *val){
 
 int delete_entry(cc_table *ta,void *key){
 	Entry **p;
-	int index = (ta->type->hash)(key)&(ta->nalloc - 1);
+	unsigned int index = (ta->type->hash)(key)&(ta->nalloc - 1);
 	p = &(ta->table[index]);
 	while (*p){
 		if (ta->type->keycom(key, (*p)->key) == 0){
@@ -105,7 +106,7 @@ int delete_entry(cc_table *ta,void *key){
 }
 
 void destory_table(cc_table *ta){
-	for (int i = 0; i < ta->nalloc; i++){
+	for (unsigned int i = 0; i < ta->nalloc; i++){
 		Entry *p = ta->table[i];
 		while (p){
 			ta->table[i] = p->next;
